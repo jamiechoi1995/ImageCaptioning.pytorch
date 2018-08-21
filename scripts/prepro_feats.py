@@ -33,6 +33,13 @@ import argparse
 import h5py
 from random import shuffle, seed
 
+import sys
+# Root directory of the project
+ROOT_DIR = os.path.abspath("./")
+
+# Import Mask RCNN
+sys.path.append(ROOT_DIR)
+
 import numpy as np
 import torch
 from torch.autograd import Variable
