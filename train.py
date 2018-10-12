@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -120,7 +121,7 @@ def train(opt):
         loss.backward()
         utils.clip_gradient(optimizer, opt.grad_clip)
         optimizer.step()
-        train_loss = loss.data[0]
+        train_loss = loss.item()
         torch.cuda.synchronize()
         end = time.time()
         # print("iter {} (epoch {}), train_loss = {:.3f}, time/batch = {:.3f}" \
