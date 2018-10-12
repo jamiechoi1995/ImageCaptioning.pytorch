@@ -7,7 +7,7 @@ import torch
 
 from .ShowTellModel import ShowTellModel
 from .FCModel import FCModel
-from .OldModel import ShowAttendTellModel, AllImgModel
+from .OldModel import ShowAttendTellModel, AllImgModel, ShowAttendTell_fc_Model, ShowAttendTell_fc1st_Model,ShowAttendTell_fcinatt_Model
 from .Att2inModel import Att2inModel
 from .AttModel import *
 
@@ -17,6 +17,12 @@ def setup(opt):
         model = ShowTellModel(opt)
     elif opt.caption_model == 'show_attend_tell':
         model = ShowAttendTellModel(opt)
+    elif opt.caption_model == 'show_attend_tell_fc':
+        model = ShowAttendTell_fc_Model(opt)
+    elif opt.caption_model == 'show_attend_tell_fc1st':
+        model = ShowAttendTell_fc1st_Model(opt)
+    elif opt.caption_model == 'show_attend_tell_fcinatt':
+        model = ShowAttendTell_fcinatt_Model(opt)
     # img is concatenated with word embedding at every time step as the input of lstm
     elif opt.caption_model == 'all_img':
         model = AllImgModel(opt)
