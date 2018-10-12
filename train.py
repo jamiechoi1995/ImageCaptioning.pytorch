@@ -10,6 +10,7 @@ import torch.optim as optim
 import numpy as np
 
 import time
+from datetime import datetime
 import os
 from six.moves import cPickle
 
@@ -24,6 +25,8 @@ try:
 except ImportError:
     print("Tensorflow not installed; No tensorboard logging.")
     tf = None
+
+print_freq = 80
 
 def add_summary_value(writer, key, value, iteration):
     summary = tf.Summary(value=[tf.Summary.Value(tag=key, simple_value=value)])
@@ -76,6 +79,8 @@ def train(opt):
 
     optimizer = optim.Adam(model.parameters(), lr=opt.learning_rate, weight_decay=opt.weight_decay)
 
+    all_loss = 0
+
     # Load the optimizer
     if vars(opt).get('start_from', None) is not None:
         optimizer.load_state_dict(torch.load(os.path.join(opt.start_from, 'optimizer.pth')))
@@ -100,7 +105,8 @@ def train(opt):
         start = time.time()
         # Load data from train split (0)
         data = loader.get_batch('train')
-        print('Read data:', time.time() - start)
+        if (iteration % print_freq == 0):
+            print('Read data:', time.time() - start)
 
         torch.cuda.synchronize()
         start = time.time()
@@ -117,8 +123,14 @@ def train(opt):
         train_loss = loss.data[0]
         torch.cuda.synchronize()
         end = time.time()
-        print("iter {} (epoch {}), train_loss = {:.3f}, time/batch = {:.3f}" \
-            .format(iteration, epoch, train_loss, end - start))
+        # print("iter {} (epoch {}), train_loss = {:.3f}, time/batch = {:.3f}" \
+        #     .format(iteration, epoch, train_loss, end - start))
+
+        all_loss = all_loss + train_loss
+
+        if (iteration % print_freq == 0):
+            print("iter {} (epoch {}), average train_loss = {:.3f}, time/batch = {:.3f}" .format(iteration, epoch, train_loss/print_freq, end - start))
+            all_loss = 0
 
         # Update the iteration and epoch
         iteration += 1
@@ -128,11 +140,11 @@ def train(opt):
 
         # Write the training loss summary
         if (iteration % opt.losses_log_every == 0):
-            if tf is not None:
-                add_summary_value(tf_summary_writer, 'train_loss', train_loss, iteration)
-                add_summary_value(tf_summary_writer, 'learning_rate', opt.current_lr, iteration)
-                add_summary_value(tf_summary_writer, 'scheduled_sampling_prob', model.ss_prob, iteration)
-                tf_summary_writer.flush()
+            # if tf is not None:
+            #     add_summary_value(tf_summary_writer, 'train_loss', train_loss, iteration)
+            #     add_summary_value(tf_summary_writer, 'learning_rate', opt.current_lr, iteration)
+            #     add_summary_value(tf_summary_writer, 'scheduled_sampling_prob', model.ss_prob, iteration)
+            #     tf_summary_writer.flush()
 
             loss_history[iteration] = train_loss
             lr_history[iteration] = opt.current_lr
@@ -147,16 +159,21 @@ def train(opt):
             val_loss, predictions, lang_stats = eval_utils.eval_split(model, crit, loader, eval_kwargs)
 
             # Write validation result into summary
-            if tf is not None:
-                add_summary_value(tf_summary_writer, 'validation loss', val_loss, iteration)
-                for k,v in lang_stats.items():
-                    add_summary_value(tf_summary_writer, k, v, iteration)
-                tf_summary_writer.flush()
+            # if tf is not None:
+            #     add_summary_value(tf_summary_writer, 'validation loss', val_loss, iteration)
+            #     for k,v in lang_stats.items():
+            #         add_summary_value(tf_summary_writer, k, v, iteration)
+            #     tf_summary_writer.flush()
             val_result_history[iteration] = {'loss': val_loss, 'lang_stats': lang_stats, 'predictions': predictions}
 
             # Save model if is improving on validation result
             if opt.language_eval == 1:
                 current_score = lang_stats['CIDEr']
+                f = open('train_log_%s.txt' % opt.id,'a')
+                f.write('Epoch {}: | Date: {} | Score: {}'.format(epoch, str(datetime.now()), str(current_score)))
+                f.write('\n')
+                f.close()
+                print('-------------------wrote to log file')
             else:
                 current_score = - val_loss
 
